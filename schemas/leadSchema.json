@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "title": "Root Schema",
+  "required": [
+      "Name",
+      "Phone"    
+  ],
+  "properties": {
+      "Name": {
+          "type": "string",
+          "title": "The Name Schema",
+          "examples": [
+              "vanshika"
+          ]
+      },
+      "Phone": {
+          "type": "string",
+          "title": "The Phone Schema",
+          "examples": [
+              "8929714332"
+          ]
+      }
+  }
+}
+
