@@ -8,57 +8,60 @@ const Ajv = require("ajv");
 const axios = require("axios");
 const addFormats = require("ajv-formats");
 const leadSchema = require("./schemas/leadSchema.json");
+const HdfcDetails = require("./hdfc/hdfc_sme_tool");
 const cors = require("cors");
 const CryptoJS = require("crypto-js");
 app.use(bodyParser.json());
+const { decryptFERequest, encryptFEResponse } = require("./cryption");
 
 //ac
 const crypto = require("crypto");
+const { required } = require("nodemon/lib/config");
 
 const dataFilePath = path.join(__dirname, "/data/leadData.json");
 
 // Allow requests from any origin
 const corsOptions = {
-  origin: "http://localhost:3002",
+  origin: ["http://localhost:3002", "http://localhost:5173","http://localhost:3001", "http://localhost:3000"],
 };
 
 // Enable CORS with options
-app.use(cors(corsOptions));
+app.use(cors());
 // const xswedcvfr = '1234';
 
 //ac
 
 // HMAC Middleware 2
-app.use((req, res, next) => {
-  // console.log(req.get('X-Signature'));
+// app.use((req, res, next) => {
+//   // console.log(req.get('X-Signature'));
 
-  // Ensure the 'x-signature' header is present in the request
-  // console.log(req.body);
-  const xswedcvfr = "1234";
-  const receivedSignature = req.get("X-Signature");
-  const timestamp = req.get("X-Timestamp");
+//   // Ensure the 'x-signature' header is present in the request
+//   console.log("here ", req.body);
+//   const xswedcvfr = "1234";
+//   const receivedSignature = req.get("X-Signature");
+//   const timestamp = req.get("X-Timestamp");
 
-  if (!receivedSignature) {
-    return res.status(400).json({ error: "Signature missing" });
-  } else {
-    // Generate HMAC from the request body using the secret key
+//   if (!receivedSignature) {
+//     return res.status(400).json({ error: "Signature missing" });
+//   } else {
+//     // Generate HMAC from the request body using the secret key
 
-    const message = `${timestamp}.${JSON.stringify(req.body)}`;
-    const hmacResult = CryptoJS.HmacSHA256(message, xswedcvfr);
-    const calculatedSignature = CryptoJS.enc.Hex.stringify(hmacResult);
+//     const message = `${timestamp}.${JSON.stringify(req.body)}`;
+//     const hmacResult = CryptoJS.HmacSHA256(message, xswedcvfr);
+//     const calculatedSignature = CryptoJS.enc.Hex.stringify(hmacResult);
 
-    console.log("calculatedSignature : ", calculatedSignature);
+//     console.log("calculatedSignature : ", calculatedSignature);
 
-    // Compare the calculated HMAC with the received signature
-    if (receivedSignature !== calculatedSignature) {
-      // console.log(receivedSignature, 'wwwww',calculatedSignature);
-      return res.status(401).json({ error: "Invalid signature" });
-    }
+//     // Compare the calculated HMAC with the received signature
+//     if (receivedSignature !== calculatedSignature) {
+//       // console.log(receivedSignature, 'wwwww',calculatedSignature);
+//       return res.status(401).json({ error: "Invalid signature" });
+//     }
 
-    // Continue to the next middleware
-    next();
-  }
-});
+//     // Continue to the next middleware
+//     next();
+//   }
+// });
 
 function writeData(data) {
   fs.writeFileSync(dataFilePath, JSON.stringify(data, null, 2));
@@ -70,6 +73,7 @@ function readData() {
 
 function splitFullName(fullName) {
   // Split the full name into words
+  console.log("FULL NAME ",fullName)
   const words = fullName.split(/\s+/);
 
   // Initialize variables for firstName, middleName, and lastName
@@ -98,17 +102,22 @@ function splitFullName(fullName) {
 
 app.post("/", (req, res) => {
   // Access the request body data
-  const requestData = req.body;
+  console.log("REQUEST DATA 11")
+  const requestDataRaw = decryptFERequest(req.body.data);
+  const requestData = JSON.parse(requestDataRaw)
+  console.log("REQUEST DATA",requestData)
+  console.log(req.body);
+  console.log('ooooo',req.body);
 
   const users = readData();
   const newUser = {
     id: Date.now(),
-    Name: req.body.Name,
-    Phone: req.body.Phone,
-    Calc: req.body.Calculator,
+    Name: requestData.Name,
+    Phone: requestData.Phone,
+    Calc: `${requestData?.calculator ?? ''}`,
   };
 
-  const fullName = req.body.Name;
+  const fullName = requestData.Name;
 
   const { firstName, middleName, lastName } = splitFullName(fullName);
 
@@ -120,55 +129,56 @@ app.post("/", (req, res) => {
         ExistingCustomerName: "",
         FirstName: "",
         MiddleName: "",
-        LastName: "",
+        LastName: "Kumar",
         Gender: "",
         DOB: "",
-        Mobile: "",
-        Email: "",
+        Mobile: "08349587567",
+        Email: "dev.sachinpasi@gmail.com",
         AnnualPremium: "0",
         SumAssured: "",
-        Product: "",
+        Product: "Fixed Deposit",
         ClickToCall: "",
-        Source: "D2C",
-        SubSource: "",
+        Source: "Leap D2C",
+        SubSource: "AFDDDIX011",
         Stage: "Lead Submission",
         SubStage: "Lead Submission",
         LeadDropped: "",
-        LeadDroppedPage: "",
+        LeadDroppedPage: "Lead Submission",
         StatusOfAadhar: "",
         AadharNumber: "",
-        StatusOfPan: "",
+        StatusOfPan: "INVALID",
         PanNumber: "",
-        DropOfUrl: "",
+        DropOfUrl:
+          "http://localhost:3000/dev/#/buy-online/calculators/applications?params=QTbUt1LQ0lXohoeo95oWfBYZtOxsZlYzmYw4P-F1QZn6dFArIav75HLA-8ZQlgh6TAcNoJAZQGp9ueR_k8YJ5anrCXJ_4yBKEKPB2_6hJjYLvMjcmC7Y5dX-RfBitctZRxlF1LEQP0pF-aG9RT5IM_iRutm2sINqiPzxYG51U18",
         DropUrlClicked: "",
         DropDateTime: "",
         LeadQualified: "",
-        JunkLead: "",
+        JunkLead: "NO",
         CId: "",
         Gclid: "",
         ApplicationNumber: "",
         SmokerNonSmoker: "",
-        Nationality: "",
+        Nationality: "IND",
         Browser: "",
         Device: "",
         RefDetails: "",
         Member: [
           {
-            MemberId: "",
-            FirstName: "",
+            MemberId: "P4EC1E74BFF22571D02F6",
+            FirstName: "Default",
             MiddleName: "",
-            LastName: "",
+            LastName: "Kumar",
             Address: "",
-            Gender: "",
-            MobileNumber: "",
-            EmailId: "",
+            Gender: "M",
+            MobileNumber: "08349587567",
+            EmailId: "dev.sachinpasi@gmail.com",
             Pincode: "",
             State: "",
             City: "",
             DOB: "",
-            Nationality: "",
+            Nationality: "Indian",
             TypeOfAddress: "",
-            Proposer: "",
+            Proposer: "YES",
             Medical: [],
             Document: [],
           },
@@ -180,6 +190,7 @@ app.post("/", (req, res) => {
   userData.Lead[0].MiddleName = middleName;
   userData.Lead[0].LastName = lastName;
   userData.Lead[0].Mobile = req.body.Phone;
+
   switch (req.body.Calc) {
     case "hlv":
       userData.Lead[0].Product = "Human Life Value";
@@ -189,12 +200,12 @@ app.post("/", (req, res) => {
       userData.Lead[0].Product = "Gratuity";
       userData.Lead[0].SubSource = "Direct - Gratuity Calculator";
       break;
+    default: 
+      userData.Lead[0].Product = "";
+      userData.Lead[0].SubSource = "";
+
   }
 
-  console.log(
-    "seeeeeee ..........................................................................................................................userData",
-    userData
-  );
   //post call
   axios
     .post(
@@ -219,6 +230,9 @@ app.post("/", (req, res) => {
   // users.push(newUser);
   // writeData(users);
 });
+
+app.post("/hdfcsmetool/api/hdfc-user-details", HdfcDetails);
+
 
 app.listen(port, () => {
   console.log(`Server started on http://localhost:${port}`);
